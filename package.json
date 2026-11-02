@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push --skip-generate && tsx src/scripts/seed.ts && next build",
+    "build": "node scripts/run-with-env.js prisma generate && node scripts/run-with-env.js prisma db push --skip-generate && node scripts/run-with-env.js tsx src/scripts/seed.ts && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:seed": "tsx --env-file .env.local src/scripts/seed.ts"
+    "db:generate": "node scripts/run-with-env.js prisma generate",
+    "db:push": "node scripts/run-with-env.js prisma db push --skip-generate",
+    "db:seed": "node scripts/run-with-env.js tsx src/scripts/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -27,6 +27,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tsx": "^4.23.15",

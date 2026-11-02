@@ -35,6 +35,18 @@ npm run db:seed                # cria/atualiza o admin e os dados iniciais
 npm run dev
 ```
 
+## Autonomia / self-hosted
+
+Para rodar fora do Vercel em um servidor ou máquina local, configure um banco PostgreSQL e use o `docker-compose.yml`:
+
+```bash
+copy .env.production.example .env.production
+# ajuste as variáveis de conexão e URLs públicas no .env.production
+docker compose up --build -d
+```
+
+A aplicação fica disponível em `http://localhost:3000`. O container realiza `prisma generate`, aplica o schema com `db push` e inicia o Next.js em produção.
+
 ## Deploy na Vercel
 
 O `npm run build` executa `prisma db push` (só aplica mudanças sem perda de dados), roda o seed e depois o `next build`. Basta configurar as variáveis no projeto da Vercel e rodar `vercel --prod`.
