@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum EvaluationStatus {
+  RASCUNHO
+  ABERTA
+  ENCERRADA
+  PUBLICADA
+}
+
+enum FichaStatus {
+  RASCUNHO
+  ENVIADA
+}
+
+enum Role {
+  ADMIN
+  AVALIADOR
+  GRUPO
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(ADMIN)
+  // Bumped on every password change/reset; sessions carrying an older value are rejected.
+  sessionVersion Int    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  resetTokens  PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  adminId   String
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([adminId])
+}
+
+model Evaluation {
+  id           String            @id @default(cuid())
+  name         String
+  discipline   String
+  turma        String
+  date         DateTime
+  scaleMin     Int               @default(0)
+  scaleMax     Int               @default(10)
+  status       EvaluationStatus  @default(RASCUNHO)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  criteria     Criterion[]
+  rubricLevels RubricLevel[]
+  bancas       Banca[]
+  draws        Draw[]
+}
+
+model Criterion {
+  id           String     @id @default(cuid())
+  evaluationId String
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  order        Int
+  name         String
+  description  String
+  weight       Decimal    @db.Decimal(5, 2)
+  createdAt    DateTime   @default(now())
+  notes        Note[]
+
+  @@unique([evaluationId, order])
+}
+
+model RubricLevel {
+  id           String     @id @default(cuid())
+  evaluationId String
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  name         String
+  rangeLabel   String
+  description  String
+  minScore     Decimal    @db.Decimal(4, 2)
+  maxScore     Decimal    @db.Decimal(4, 2)
+  createdAt    DateTime   @default(now())
+}
+
+model Banca {
+  id              String      @id @default(cuid())
+  evaluationId    String
+  evaluation      Evaluation  @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  name            String
+  local           String
+  startsAt        DateTime
+  minutesPerGroup Int
+  createdAt       DateTime    @default(now())
+  evaluators      Evaluator[]
+  groups          Group[]
+  draws           Draw[]
+}
+
+model Evaluator {
+  id        String   @id @default(cuid())
+  bancaId   String
+  banca     Banca    @relation(fields: [bancaId], references: [id], onDelete: Cascade)
+  name      String
+  role      String
+  company   String
+  token     String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  fichas    Ficha[]
+}
+
+model Group {
+  id            String   @id @default(cuid())
+  bancaId       String
+  banca         Banca    @relation(fields: [bancaId], references: [id], onDelete: Cascade)
+  name          String
+  project       String
+  track         String
+  description   String?
+  members       String[]
+  feedbackToken String   @unique
+  drawPosition  Int?
+  scheduledTime DateTime?
+  durationMinutes Int    @default(25)
+  createdAt     DateTime @default(now())
+  fichas        Ficha[]
+}
+
+model Draw {
+  id           String     @id @default(cuid())
+  evaluationId String
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  bancaId      String
+  banca        Banca      @relation(fields: [bancaId], references: [id], onDelete: Cascade)
+  drawDate     DateTime   @default(now())
+  orderJson    Json
+  confirmed    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+}
+
+model Ficha {
+  id             String     @id @default(cuid())
+  evaluatorId    String
+  evaluator      Evaluator   @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
+  groupId        String
+  group          Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  status         FichaStatus @default(RASCUNHO)
+  hidden         Boolean    @default(false)
+  strengths      String?
+  improvements   String?
+  generalComment String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  notes          Note[]
+
+  @@unique([evaluatorId, groupId])
+}
+
+model Note {
+  id          String    @id @default(cuid())
+  fichaId     String
+  ficha       Ficha     @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+  criterionId String
+  criterion   Criterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  value       Decimal   @db.Decimal(4, 2)
+  createdAt   DateTime  @default(now())
+
+  @@unique([fichaId, criterionId])
+}
